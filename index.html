@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<title>Standby Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,sans-serif;}
+
+html,body{
+width:100%;
+height:100%;
+overflow:hidden;
+background:#000;
+color:#fff;
+}
+
+body{
+display:flex;
+justify-content:center;
+align-items:center;
+position:relative;
+}
+
+body::before{
+content:'';
+position:absolute;
+inset:-20%;
+background:
+radial-gradient(circle at 20% 20%,#2563eb55,transparent 30%),
+radial-gradient(circle at 80% 30%,#9333ea55,transparent 30%),
+radial-gradient(circle at 50% 80%,#06b6d455,transparent 30%);
+filter:blur(90px);
+animation:bg 20s linear infinite;
+}
+
+@keyframes bg{
+0%{transform:translate(0,0) scale(1);}
+50%{transform:translate(-5%,5%) scale(1.08);}
+100%{transform:translate(0,0) scale(1);}
+}
+
+.dashboard{
+position:relative;
+z-index:1;
+width:min(96vw,1600px);
+aspect-ratio:16/9;
+display:grid;
+grid-template-columns:2fr 1fr;
+gap:20px;
+padding:24px;
+border-radius:40px;
+background:rgba(2,6,23,.72);
+backdrop-filter:blur(40px);
+}
+
+.card{
+background:rgba(255,255,255,0.05);
+border:1px solid rgba(255,255,255,0.08);
+border-radius:30px;
+padding:28px;
+position:relative;
+overflow:hidden;
+}
+
+/* CLOCK */
+.clock{
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+}
+
+.date{
+font-size:22px;
+opacity:.7;
+margin-bottom:18px;
+}
+
+.flip{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.box{
+width:110px;
+height:150px;
+background:#111827;
+border-radius:22px;
+display:flex;
+justify-content:center;
+align-items:center;
+font-size:90px;
+font-weight:900;
+}
+
+.sep{font-size:70px;font-weight:900;}
+.sec{font-size:40px;opacity:.7;width:70px;text-align:center;}
+
+/* WEATHER */
+.top{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+}
+
+.temp{font-size:70px;font-weight:900;}
+
+.icon svg,
+.small svg{
+stroke:#fff;
+fill:none;
+stroke-width:2;
+stroke-linecap:round;
+stroke-linejoin:round;
+}
+
+.icon svg{width:72px;height:72px;}
+.small svg{width:26px;height:26px;}
+
+.list{display:flex;flex-direction:column;gap:10px;}
+
+.row{
+display:grid;
+grid-template-columns:1fr 1fr 1fr 1fr;
+padding:12px;
+background:rgba(255,255,255,0.05);
+border-radius:14px;
+align-items:center;
+font-size:15px;
+}
+
+.rain{
+display:flex;
+align-items:center;
+gap:6px;
+opacity:.85;
+}
+
+.rain svg{
+width:14px;
+height:14px;
+stroke:#fff;
+fill:none;
+}
+
+/* NEWS */
+.news{
+display:flex;
+flex-direction:column;
+gap:12px;
+animation:scroll 120s linear infinite;
+}
+
+@keyframes scroll{
+0%{transform:translateY(0);}
+100%{transform:translateY(-70%);}
+}
+
+.item{
+padding:14px;
+background:rgba(255,255,255,0.05);
+border-radius:16px;
+font-size:15px;
+line-height:1.5;
+}
+
+/* slide */
+.slide{position:absolute;inset:0;padding:28px;}
+.hide{opacity:0;transform:translateX(40px);pointer-events:none;}
+</style>
+</head>
+
+<body>
+
+<div class="dashboard">
+
+<!-- CLOCK -->
+<div class="card clock">
+
+<div class="date" id="date">Loading...</div>
+
+<div class="flip">
+<div class="box" id="h">00</div>
+<div class="sep">:</div>
+<div class="box" id="m">00</div>
+<div class="sec" id="s">00</div>
+</div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="card">
+
+<div id="weather" class="slide">
+<div class="top">
+<div>
+<div>Weather</div>
+<div class="temp" id="temp">--°</div>
+</div>
+<div class="icon" id="wicon"></div>
+</div>
+
+<div class="list" id="forecast"></div>
+</div>
+
+<div id="news" class="slide hide">
+<div class="news" id="newsList"></div>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+let lat=35.01, lon=135.76;
+
+navigator.geolocation.getCurrentPosition(p=>{
+lat=p.coords.latitude;
+lon=p.coords.longitude;
+});
+
+/* CLOCK */
+function flip(id,v){
+const el=document.getElementById(id);
+if(el.textContent!==v){
+el.textContent=v;
+}
+}
+
+function clock(){
+const n=new Date();
+
+const week=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+document.getElementById("date").textContent=
+`${n.getFullYear()}/${n.getMonth()+1}/${n.getDate()} ${week[n.getDay()]}`;
+
+flip("h",String(n.getHours()).padStart(2,"0"));
+flip("m",String(n.getMinutes()).padStart(2,"0"));
+document.getElementById("s").textContent=String(n.getSeconds()).padStart(2,"0");
+}
+
+setInterval(clock,1000);
+clock();
+
+/* ICONS */
+function icon(t){
+if(t==="sun"){
+return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
+}
+return `<svg viewBox="0 0 24 24"><path d="M7 16a4 4 0 1 1 .9-7.9A5 5 0 0 1 17 9a3 3 0 1 1 1 6H7"/></svg>`;
+}
+
+const rainIcon=`
+<svg viewBox="0 0 24 24">
+<path d="M12 2C12 2 5 10 5 14a7 7 0 0 0 14 0c0-4-7-12-7-12z"/>
+</svg>`;
+
+/* WEATHER */
+async function weather(){
+const res=await fetch(
+`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability,weathercode&forecast_days=1`
+);
+
+const d=await res.json();
+
+document.getElementById("temp").textContent=
+Math.round(d.hourly.temperature_2m[0])+"°";
+
+document.getElementById("wicon").innerHTML=
+icon(d.hourly.weathercode[0]===0?"sun":"cloud");
+
+let html="";
+for(let i=0;i<24;i+=3){
+const h=new Date(d.hourly.time[i]).getHours();
+
+html+=`
+<div class="row">
+<div>${h}:00</div>
+<div class="small">${icon(d.hourly.weathercode[i]===0?"sun":"cloud")}</div>
+<div>${Math.round(d.hourly.temperature_2m[i])}°</div>
+<div class="rain">${rainIcon}${d.hourly.precipitation_probability[i]}%</div>
+</div>`;
+}
+
+document.getElementById("forecast").innerHTML=html;
+}
+
+weather();
+
+/* NEWS */
+async function news(){
+const rss="https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja";
+const api="https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(rss);
+
+const r=await fetch(api);
+const d=await r.json();
+
+document.getElementById("newsList").innerHTML=
+d.items.slice(0,30).map(i=>
+`<div class="item"><b>${i.title}</b></div>`
+).join("");
+}
+
+news();
+
+/* SWITCH */
+let w=true;
+setInterval(()=>{
+document.getElementById("weather").classList.toggle("hide",!w);
+document.getElementById("news").classList.toggle("hide",w);
+w=!w;
+},30000);
+
+/* REFRESH */
+setInterval(weather,600000);
+setInterval(news,600000);
+
+</script>
+
+</body>
+</html>
